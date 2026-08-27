@@ -55,6 +55,8 @@ jobs:
           ZEPP_PASSWORD: ${{ secrets.ZEPP_PASSWORD }}
           ZEPP_REGION: ${{ secrets.ZEPP_REGION }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          # Empty when the secret is undefined; config.py drops it so the SDK
+          # falls back to its default endpoint instead of a scheme-less URL.
           OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
           LLM_MODEL: ${{ secrets.LLM_MODEL }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}

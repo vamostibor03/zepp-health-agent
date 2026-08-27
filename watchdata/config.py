@@ -71,6 +71,13 @@ class Config:
 
     @classmethod
     def from_env(cls) -> "Config":
+        # The OpenAI SDK reads OPENAI_BASE_URL straight from the environment.
+        # CI often sets it to an empty string (from an undefined secret), which
+        # produces an invalid, scheme-less base URL and a connection error.
+        # Drop it entirely when blank so the SDK uses its default endpoint.
+        if not os.environ.get("OPENAI_BASE_URL", "").strip():
+            os.environ.pop("OPENAI_BASE_URL", None)
+
         # Two supported auth modes:
         #   1. Token mode (preferred, avoids login rate limits): supply
         #      ZEPP_APP_TOKEN + ZEPP_USER_ID extracted from user.huami.com.
