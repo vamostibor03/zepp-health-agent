@@ -46,10 +46,11 @@ jobs:
 
       - name: Run report
         env:
+          ZEPP_APP_TOKEN: ${{ secrets.ZEPP_APP_TOKEN }}
+          ZEPP_USER_ID: ${{ secrets.ZEPP_USER_ID }}
           ZEPP_EMAIL: ${{ secrets.ZEPP_EMAIL }}
           ZEPP_PASSWORD: ${{ secrets.ZEPP_PASSWORD }}
           ZEPP_REGION: ${{ secrets.ZEPP_REGION }}
-          ZEPP_USER_ID: ${{ secrets.ZEPP_USER_ID }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
           LLM_MODEL: ${{ secrets.LLM_MODEL }}
