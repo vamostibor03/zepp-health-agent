@@ -221,7 +221,13 @@ class ZeppClient:
             "from_date": from_date.isoformat(),
             "to_date": to_date.isoformat(),
         }
-        headers = {"apptoken": self.app_token}
+        # These headers are required; without appname/appPlatform the server
+        # returns a generic HTTP 500 (code -50000).
+        headers = {
+            "apptoken": self.app_token,
+            "appPlatform": "web",
+            "appname": "com.xiaomi.hm.health",
+        }
         resp = self.session.get(
             url, params=params, headers=headers, timeout=self.timeout
         )
@@ -232,6 +238,11 @@ class ZeppClient:
             )
 
         payload = resp.json()
+        if payload.get("code") not in (1, None):
+            raise RuntimeError(
+                f"band_data returned API error: {payload.get('message')} "
+                f"(code={payload.get('code')})"
+            )
         items = payload.get("data", []) or []
         logger.info(
             "Fetched %d day(s) of band data (%s -> %s)",
@@ -260,7 +271,7 @@ class ZeppClient:
         return json.loads(raw.decode("utf-8"))
 
     def _parse_day(self, item: dict[str, Any]) -> Optional[DailyMetrics]:
-        day_str = item.get("date")
+        day_str = item.get("date_time") or item.get("date")
         if not day_str:
             return None
         day = date.fromisoformat(day_str)
