@@ -1,0 +1,79 @@
+name: Daily Health Report
+
+on:
+  schedule:
+    # 06:30 UTC every day. Adjust to taste (cron is always in UTC).
+    - cron: "30 6 * * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Report mode"
+        type: choice
+        options: [daily, prev-day]
+        default: daily
+      date:
+        description: "Target date (YYYY-MM-DD, blank = yesterday)"
+        required: false
+        default: ""
+      backfill:
+        description: "Backfill this many days of history first"
+        required: false
+        default: "0"
+
+# Allow the workflow to push the updated database back to the repo.
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-health-report
+  cancel-in-progress: false
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run report
+        env:
+          ZEPP_EMAIL: ${{ secrets.ZEPP_EMAIL }}
+          ZEPP_PASSWORD: ${{ secrets.ZEPP_PASSWORD }}
+          ZEPP_REGION: ${{ secrets.ZEPP_REGION }}
+          ZEPP_USER_ID: ${{ secrets.ZEPP_USER_ID }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
+          LLM_MODEL: ${{ secrets.LLM_MODEL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TIMEZONE: ${{ secrets.TIMEZONE }}
+          DATABASE_PATH: data/health.db
+        run: |
+          MODE="${{ github.event.inputs.mode || 'daily' }}"
+          DATE_ARG=""
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            DATE_ARG="--date ${{ github.event.inputs.date }}"
+          fi
+          BACKFILL="${{ github.event.inputs.backfill || '0' }}"
+          python -m watchdata.main --mode "$MODE" --backfill "$BACKFILL" $DATE_ARG
+
+      - name: Commit updated history
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f data/health.db
+          if git diff --cached --quiet; then
+            echo "No database changes to commit."
+          else
+            git commit -m "chore: update health history [skip ci]"
+            git push
+          fi

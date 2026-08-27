@@ -1,0 +1,21 @@
+# Environment
+.env
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Local data / logs (the tracked DB lives in data/ and is committed by CI;
+# ignore everything else that is transient)
+data/*.json
+data/raw/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
