@@ -17,15 +17,17 @@ from .trends import TrendReport
 logger = logging.getLogger("watchdata.llm")
 
 DAILY_SYSTEM_PROMPT = (
-    "You are a concise, encouraging personal health analyst. You receive one "
-    "day of wearable (Amazfit/Zepp) metrics plus how they compare to the "
-    "user's trailing 7/30/90-day averages. Write a short daily report.\n\n"
+    "You are a concise, encouraging personal health analyst. You receive the "
+    "metrics for a SINGLE past day (identified by its date) plus how they "
+    "compare to the user's trailing 7/30/90-day averages ending the day "
+    "before. Write a short report about THAT day.\n\n"
     "Guidelines:\n"
-    "- Open with a one-line headline summarizing the day.\n"
+    "- Refer to the day by its weekday/date, not as 'today'.\n"
+    "- Open with a one-line headline summarizing that day.\n"
     "- Call out 2-4 notable changes vs the baselines (improvements AND "
     "regressions), citing concrete numbers and the % change.\n"
     "- Comment on sleep, activity, and heart/recovery if data is present.\n"
-    "- End with 1-2 specific, actionable suggestions for today.\n"
+    "- End with 1-2 specific, actionable suggestions for the days ahead.\n"
     "- Be honest but supportive. Never invent data that isn't provided.\n"
     "- Do NOT give medical diagnoses; suggest seeing a professional only if a "
     "metric looks genuinely alarming.\n"
@@ -109,7 +111,7 @@ def _build_daily_prompt(target: DailyMetrics, trends: TrendReport) -> str:
             t.averages.get(w) is None for w in trends.as_dict()["windows"]
         ):
             continue
-        parts = [f"- {t.label}: today={_fmt(t.value, t.unit)}"]
+        parts = [f"- {t.label}: value={_fmt(t.value, t.unit)}"]
         for window in (7, 30, 90):
             avg = t.averages.get(window)
             pct = t.pct_change.get(window)

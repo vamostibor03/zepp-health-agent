@@ -2,8 +2,11 @@ name: Daily Health Report
 
 on:
   schedule:
-    # 06:30 UTC every day. Adjust to taste (cron is always in UTC).
-    - cron: "30 6 * * *"
+    # 08:00 UTC every day = 10:00 in Berlin during summer (CEST, UTC+2).
+    # Note: GitHub cron is always UTC and does NOT follow DST, so in winter
+    # (CET, UTC+1) this fires at 09:00 local. Change to "0 9 * * *" if you
+    # want 10:00 local in winter instead.
+    - cron: "0 8 * * *"
   workflow_dispatch:
     inputs:
       mode:

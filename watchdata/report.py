@@ -31,13 +31,15 @@ def _arrow(pct: Optional[float]) -> str:
 def build_daily_report(
     target: DailyMetrics, trends: TrendReport, analysis: str
 ) -> str:
+    weekday = target.day.strftime("%A")
     lines = [
-        f"\U0001f4ca Daily Health Report \u2014 {target.day.isoformat()}",
+        f"\U0001f4ca Daily Health Report \u2014 {weekday}, {target.day.isoformat()}",
         "",
         analysis.strip(),
         "",
         "\u2014" * 12,
-        "Metrics (today | 7d | 30d | 90d):",
+        f"Metrics for {target.day.isoformat()} "
+        "(value | vs 7d avg | 30d avg | 90d avg):",
     ]
     for name, t in trends.metrics.items():
         if t.value is None:
