@@ -108,12 +108,16 @@ def _get_target_metrics(
     return DailyMetrics(day=target)
 
 
-def run_daily(cfg: Config, args: argparse.Namespace) -> str:
-    target = _resolve_target(cfg, args.date)
-    logger.info("Running DAILY report for %s", target)
+def generate_daily_report(
+    cfg: Config, target: date, backfill: int = 0
+) -> str:
+    """Build (but do NOT deliver) the full daily report for ``target``.
 
+    Shared by the CLI and the on-demand Telegram command bot.
+    """
+    logger.info("Building DAILY report for %s", target)
     with Storage(cfg.database_path) as storage:
-        fetched = _sync_data(cfg, storage, target, args.backfill)
+        fetched = _sync_data(cfg, storage, target, backfill)
         metrics = _get_target_metrics(storage, fetched, target)
         trends = compute_trends(storage, metrics)
 
@@ -123,18 +127,16 @@ def run_daily(cfg: Config, args: argparse.Namespace) -> str:
             base_url=cfg.openai_base_url,
         )
         analysis = analyzer.analyze_daily(metrics, trends)
-        report = build_daily_report(metrics, trends, analysis)
-
-    _deliver(cfg, args, report)
-    return report
+        return build_daily_report(metrics, trends, analysis)
 
 
-def run_prev_day(cfg: Config, args: argparse.Namespace) -> str:
-    target = _resolve_target(cfg, args.date)
-    logger.info("Running PREV-DAY recap for %s", target)
-
+def generate_prev_day_report(
+    cfg: Config, target: date, backfill: int = 0
+) -> str:
+    """Build (but do NOT deliver) the previous-day recap for ``target``."""
+    logger.info("Building PREV-DAY recap for %s", target)
     with Storage(cfg.database_path) as storage:
-        fetched = _sync_data(cfg, storage, target, args.backfill)
+        fetched = _sync_data(cfg, storage, target, backfill)
         metrics = _get_target_metrics(storage, fetched, target)
 
         analyzer = LLMAnalyzer(
@@ -143,8 +145,19 @@ def run_prev_day(cfg: Config, args: argparse.Namespace) -> str:
             base_url=cfg.openai_base_url,
         )
         analysis = analyzer.analyze_prev_day(metrics)
-        report = build_prev_day_report(metrics, analysis)
+        return build_prev_day_report(metrics, analysis)
 
+
+def run_daily(cfg: Config, args: argparse.Namespace) -> str:
+    target = _resolve_target(cfg, args.date)
+    report = generate_daily_report(cfg, target, args.backfill)
+    _deliver(cfg, args, report)
+    return report
+
+
+def run_prev_day(cfg: Config, args: argparse.Namespace) -> str:
+    target = _resolve_target(cfg, args.date)
+    report = generate_prev_day_report(cfg, target, args.backfill)
     _deliver(cfg, args, report)
     return report
 
