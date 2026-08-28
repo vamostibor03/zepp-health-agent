@@ -57,6 +57,13 @@ mcp = FastMCP(
         "(get_day, get_days, latest_days, get_trends, overview). The generic "
         "search/fetch pair exists mainly for ChatGPT deep research."
     ),
+    # Stateless so each request is self-contained. Essential on hosts that may
+    # recycle the instance between calls (e.g. Render free tier), where a
+    # stateful session established on one request would not survive to the next
+    # and cause intermittent 404s. json_response returns plain JSON (no SSE
+    # stream), which is also more robust through proxies. Ignored for stdio.
+    stateless_http=True,
+    json_response=True,
 )
 
 
