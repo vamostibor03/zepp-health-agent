@@ -1,0 +1,14 @@
+# Never bake secrets or local cruft into the image.
+.env
+.env.*
+.git
+.gitignore
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+terminals/
+.vscode/
+.idea/
+*.log

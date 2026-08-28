@@ -3,3 +3,6 @@ python-dotenv>=1.0.0,<2
 # Pin to the stable openai 1.x line. 2.x/3.x switched to the httpx2 stack
 # which failed at the transport layer on CI runners.
 openai>=1.40.0,<2
+# MCP server (exposes the health history to Cursor/Claude via stdio and to
+# ChatGPT via streamable-http). Only needed when running watchdata.mcp_server.
+mcp>=1.9.0

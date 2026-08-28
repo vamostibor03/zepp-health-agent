@@ -290,7 +290,9 @@ class ZeppClient:
         slp = summary.get("slp") or {}
         deep = _as_int(slp.get("dp"))
         light = _as_int(slp.get("lt"))
-        rem = _as_int(slp.get("rem"))
+        # REM ("dream time") is reported under "dt" by current firmware; older
+        # payloads used "rem". Prefer whichever is present.
+        rem = _as_int(_first(slp, ["dt", "rem"]))
         awake = _as_int(slp.get("wk"))
         metrics.sleep_deep_min = deep
         metrics.sleep_light_min = light
@@ -303,7 +305,8 @@ class ZeppClient:
         if metrics.sleep_total_min is None:
             parts = [p for p in (deep, light, rem) if p is not None]
             metrics.sleep_total_min = sum(parts) if parts else None
-        metrics.sleep_score = _as_int(slp.get("scnt")) or _as_int(slp.get("score"))
+        # Sleep score is "ss" on current firmware ("scnt"/"score" on older ones).
+        metrics.sleep_score = _as_int(_first(slp, ["ss", "scnt", "score"]))
 
         # --- Heart rate -----------------------------------------------------
         # Resting/avg HR may live in a couple of places depending on firmware.

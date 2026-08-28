@@ -1,0 +1,19 @@
+# Render Blueprint for the WatchData MCP server (free tier).
+# Deploys the Docker image and auto-redeploys on every push to the branch -
+# so the daily "chore: update health history" commit refreshes the hosted DB.
+#
+# Setup: push this repo to GitHub, go to https://dashboard.render.com ->
+# New -> Blueprint, pick the repo. Render reads this file and creates the
+# service. The public URL will be https://<name>.onrender.com ; the MCP
+# endpoint for ChatGPT is that URL + /mcp.
+services:
+  - type: web
+    name: watchdata-mcp
+    runtime: docker
+    plan: free
+    autoDeploy: true
+    envVars:
+      # After the first deploy you know the domain; set this to lock down the
+      # Host header (leave unset to accept any proxy host).
+      - key: MCP_ALLOWED_HOSTS
+        sync: false
