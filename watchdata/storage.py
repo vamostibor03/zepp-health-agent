@@ -45,8 +45,15 @@ class Storage:
         directory = os.path.dirname(path)
         if directory:
             os.makedirs(directory, exist_ok=True)
-        self.conn = sqlite3.connect(path)
+        self.conn = sqlite3.connect(path, timeout=10)
         self.conn.row_factory = sqlite3.Row
+        # WAL + a busy timeout let the MCP server (reads) and the bot / fetch
+        # (writes) share one file concurrently without "database is locked".
+        try:
+            self.conn.execute("PRAGMA journal_mode=WAL")
+            self.conn.execute("PRAGMA busy_timeout=10000")
+        except sqlite3.DatabaseError:
+            logger.warning("Could not set WAL/busy_timeout pragmas", exc_info=True)
         self._init_schema()
 
     def _init_schema(self) -> None:

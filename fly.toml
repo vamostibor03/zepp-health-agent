@@ -1,0 +1,49 @@
+# Fly.io config for the combined host: MCP server + Telegram bot + daily job,
+# all sharing one health.db on a persistent volume.
+#
+# One-time setup (install flyctl first: https://fly.io/docs/flyctl/install/):
+#   fly launch --no-deploy --copy-config --name watchdata      # or edit app name
+#   fly volumes create watchdata_data --size 1 --region fra
+#   fly secrets set \
+#     ZEPP_APP_TOKEN=... ZEPP_USER_ID=... ZEPP_REGION=de \
+#     ZEPP_EMAIL=... ZEPP_PASSWORD=... \
+#     OPENAI_API_KEY=... TELEGRAM_BOT_TOKEN=... TELEGRAM_CHAT_ID=... TIMEZONE=Europe/Berlin
+#   fly deploy
+#
+# The public MCP URL becomes https://<app>.fly.dev/mcp
+
+app = "watchdata"
+primary_region = "fra"
+
+[build]
+
+[env]
+  HOST = "0.0.0.0"
+  PORT = "8080"
+  DATABASE_PATH = "/data/health.db"
+  # Lock the Host header to your domain (set after you know the app name).
+  MCP_ALLOWED_HOSTS = "watchdata.fly.dev"
+  # Uncomment to have the host send the daily report itself (then DISABLE the
+  # GitHub Actions schedule to avoid duplicate messages):
+  # RUN_DAILY_UTC = "08:30"
+
+# Run the combined server instead of the image's default (MCP-only) CMD.
+[processes]
+  app = "python -m watchdata.serve"
+
+[[mounts]]
+  source = "watchdata_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # Keep one machine always up so the bot keeps polling and there are no cold
+  # starts. (auto_stop would pause the bot when HTTP is idle.)
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

@@ -538,37 +538,44 @@ def _parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     return p.parse_args(argv)
 
 
+def serve_http(host: str, port: int, allowed_hosts: Optional[list[str]] = None) -> None:
+    """Configure and run the streamable-http transport.
+
+    Shared by the standalone CLI and the combined host runner (watchdata.serve).
+    """
+    mcp.settings.host = host
+    mcp.settings.port = port
+    # Allowed hosts may also come from the env (comma-separated), handy on
+    # hosting platforms where the public domain is known at deploy time.
+    hosts_in = list(allowed_hosts or [])
+    env_hosts = os.environ.get("MCP_ALLOWED_HOSTS", "")
+    if env_hosts:
+        hosts_in += [h.strip() for h in env_hosts.split(",") if h.strip()]
+    # The SDK auto-enables DNS-rebinding protection for localhost binds, which
+    # rejects requests forwarded by a proxy (ngrok / Fly / Render) with
+    # "421 Invalid Host header". Behind an HTTPS proxy we must relax it.
+    if hosts_in:
+        hosts: list[str] = []
+        origins: list[str] = []
+        for h in hosts_in:
+            hosts.extend([h, f"{h}:*"])
+            origins.extend([f"https://{h}", f"https://{h}:*"])
+        mcp.settings.transport_security = TransportSecuritySettings(
+            enable_dns_rebinding_protection=True,
+            allowed_hosts=hosts,
+            allowed_origins=origins,
+        )
+    else:
+        mcp.settings.transport_security = TransportSecuritySettings(
+            enable_dns_rebinding_protection=False
+        )
+    mcp.run(transport="streamable-http")
+
+
 def main(argv: Optional[list[str]] = None) -> int:
     args = _parse_args(argv)
     if args.http:
-        mcp.settings.host = args.host
-        mcp.settings.port = args.port
-        # Allowed hosts may also come from the env (comma-separated), handy on
-        # hosting platforms where the public domain is known at deploy time.
-        env_hosts = os.environ.get("MCP_ALLOWED_HOSTS", "")
-        if env_hosts:
-            args.allowed_host = args.allowed_host + [
-                h.strip() for h in env_hosts.split(",") if h.strip()
-            ]
-        # The SDK auto-enables DNS-rebinding protection for localhost binds,
-        # which rejects requests forwarded by a proxy (e.g. ngrok) with
-        # "421 Invalid Host header". Behind an HTTPS tunnel we must relax it.
-        if args.allowed_host:
-            hosts: list[str] = []
-            origins: list[str] = []
-            for h in args.allowed_host:
-                hosts.extend([h, f"{h}:*"])
-                origins.extend([f"https://{h}", f"https://{h}:*"])
-            mcp.settings.transport_security = TransportSecuritySettings(
-                enable_dns_rebinding_protection=True,
-                allowed_hosts=hosts,
-                allowed_origins=origins,
-            )
-        else:
-            mcp.settings.transport_security = TransportSecuritySettings(
-                enable_dns_rebinding_protection=False
-            )
-        mcp.run(transport="streamable-http")
+        serve_http(args.host, args.port, args.allowed_host)
     else:
         mcp.run(transport="stdio")
     return 0
