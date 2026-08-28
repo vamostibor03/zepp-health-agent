@@ -41,9 +41,14 @@ from typing import Any, Optional
 from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
 
-from .models import METRIC_LABELS, DailyMetrics
+from .models import MANUAL_METRICS, METRIC_LABELS, DailyMetrics
 from .storage import Storage
-from .transformation import compute_transformation, format_transformation_text
+from .transformation import (
+    compute_summary,
+    compute_transformation,
+    format_summary_text,
+    format_transformation_text,
+)
 from .trends import compute_trends
 
 _DB_PATH = os.environ.get("DATABASE_PATH", "data/health.db").strip() or "data/health.db"
@@ -328,6 +333,45 @@ def anomalie_markers(day: str) -> dict[str, Any]:
             "HRV": "not provided by the band_data endpoint",
             "Respiratory Rate": "not provided by the band_data endpoint",
         },
+    }
+
+
+@mcp.tool()
+def body_metrics(day: str) -> dict[str, Any]:
+    """Return manually-logged body/nutrition metrics for a day.
+
+    These are entered via the Telegram bot (weight, waist, chest, hips, neck,
+    body fat, calories, protein) - the watch does not provide them. Returns the
+    values recorded on that exact day.
+    """
+    target = _parse_date(day)
+    with Storage(_DB_PATH) as s:
+        entries = s.get_manual(target)
+    out: dict[str, Any] = {"day": target.isoformat(), "found": bool(entries)}
+    for key, meta in MANUAL_METRICS.items():
+        if key in entries:
+            out[key] = {"value": entries[key]["value"], "unit": meta["unit"]}
+    return out
+
+
+@mcp.tool()
+def transformation_summary(day: str) -> dict[str, Any]:
+    """High-level "am I progressing?" summary combining watch + manual data.
+
+    Weight (baseline/current/7d avg/weekly trend/total change), latest body
+    measurements, activity (avg steps, week-over-week change, days over step
+    thresholds), sleep (7d avg, % nights 7-9h, bedtime variability), recovery
+    (resting HR + change), and nutrition (avg calories/protein). Returns a
+    ``text`` block plus structured ``summary`` JSON. No values are fabricated.
+    """
+    target = _parse_date(day)
+    with Storage(_DB_PATH) as s:
+        data = compute_summary(s, target)
+    return {
+        "found": True,
+        "day": target.isoformat(),
+        "text": format_summary_text(data),
+        "summary": data,
     }
 
 

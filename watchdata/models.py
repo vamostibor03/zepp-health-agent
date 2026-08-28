@@ -64,6 +64,43 @@ class DailyMetrics:
         return out
 
 
+# Manually-logged metrics (not provided by the watch). Recorded via the
+# Telegram bot and surfaced through the MCP + transformation summary.
+MANUAL_METRICS: dict[str, dict[str, str]] = {
+    "weight": {"label": "Weight", "unit": "kg"},
+    "waist": {"label": "Waist", "unit": "cm"},
+    "chest": {"label": "Chest", "unit": "cm"},
+    "hips": {"label": "Hips", "unit": "cm"},
+    "neck": {"label": "Neck", "unit": "cm"},
+    "bodyfat": {"label": "Body fat", "unit": "%"},
+    "calories": {"label": "Calories", "unit": "kcal"},
+    "protein": {"label": "Protein", "unit": "g"},
+}
+
+# Convenience aliases accepted from the user (mapped to canonical keys above).
+MANUAL_ALIASES: dict[str, str] = {
+    "wt": "weight",
+    "kg": "weight",
+    "bf": "bodyfat",
+    "bodyfat_pct": "bodyfat",
+    "fat": "bodyfat",
+    "cal": "calories",
+    "cals": "calories",
+    "kcal": "calories",
+    "calories_kcal": "calories",
+    "prot": "protein",
+    "protein_g": "protein",
+}
+
+
+def resolve_manual_metric(name: str) -> Optional[str]:
+    """Map a user-typed metric name/alias to a canonical manual metric key."""
+    key = name.strip().lower()
+    if key in MANUAL_METRICS:
+        return key
+    return MANUAL_ALIASES.get(key)
+
+
 # Human-friendly labels + formatting metadata for reports.
 METRIC_LABELS: dict[str, dict[str, str]] = {
     "steps": {"label": "Steps", "unit": ""},

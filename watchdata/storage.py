@@ -61,7 +61,105 @@ class Storage:
             )
             """
         )
+        # Manually-logged metrics (weight, waist, calories, ...) keyed by
+        # (day, metric) so each can be updated independently.
+        self.conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS manual_log (
+                day TEXT NOT NULL,
+                metric TEXT NOT NULL,
+                value REAL,
+                unit TEXT,
+                updated_at TEXT DEFAULT (datetime('now')),
+                PRIMARY KEY (day, metric)
+            )
+            """
+        )
         self.conn.commit()
+
+    # --------------------------------------------------------- manual metrics
+    def set_manual(
+        self, day: date, metric: str, value: float, unit: Optional[str] = None
+    ) -> None:
+        self.conn.execute(
+            """
+            INSERT INTO manual_log (day, metric, value, unit, updated_at)
+            VALUES (?, ?, ?, ?, datetime('now'))
+            ON CONFLICT(day, metric) DO UPDATE SET
+                value=excluded.value, unit=excluded.unit,
+                updated_at=datetime('now')
+            """,
+            (day.isoformat(), metric, float(value), unit),
+        )
+        self.conn.commit()
+
+    def delete_manual(self, day: date, metric: str) -> bool:
+        cur = self.conn.execute(
+            "DELETE FROM manual_log WHERE day = ? AND metric = ?",
+            (day.isoformat(), metric),
+        )
+        self.conn.commit()
+        return cur.rowcount > 0
+
+    def get_manual(self, day: date) -> dict[str, dict[str, object]]:
+        cur = self.conn.execute(
+            "SELECT metric, value, unit FROM manual_log WHERE day = ?",
+            (day.isoformat(),),
+        )
+        return {
+            r["metric"]: {"value": r["value"], "unit": r["unit"]}
+            for r in cur.fetchall()
+        }
+
+    def get_manual_range(
+        self, metric: str, start: date, end: date
+    ) -> list[tuple[date, float]]:
+        """(day, value) pairs for a metric in an inclusive range, oldest first."""
+        cur = self.conn.execute(
+            """
+            SELECT day, value FROM manual_log
+            WHERE metric = ? AND day BETWEEN ? AND ? AND value IS NOT NULL
+            ORDER BY day
+            """,
+            (metric, start.isoformat(), end.isoformat()),
+        )
+        return [(date.fromisoformat(r["day"]), r["value"]) for r in cur.fetchall()]
+
+    def latest_manual(
+        self, metric: str, on_or_before: Optional[date] = None
+    ) -> Optional[tuple[date, float]]:
+        if on_or_before is not None:
+            cur = self.conn.execute(
+                """
+                SELECT day, value FROM manual_log
+                WHERE metric = ? AND value IS NOT NULL AND day <= ?
+                ORDER BY day DESC LIMIT 1
+                """,
+                (metric, on_or_before.isoformat()),
+            )
+        else:
+            cur = self.conn.execute(
+                """
+                SELECT day, value FROM manual_log
+                WHERE metric = ? AND value IS NOT NULL
+                ORDER BY day DESC LIMIT 1
+                """,
+                (metric,),
+            )
+        row = cur.fetchone()
+        return (date.fromisoformat(row["day"]), row["value"]) if row else None
+
+    def earliest_manual(self, metric: str) -> Optional[tuple[date, float]]:
+        cur = self.conn.execute(
+            """
+            SELECT day, value FROM manual_log
+            WHERE metric = ? AND value IS NOT NULL
+            ORDER BY day ASC LIMIT 1
+            """,
+            (metric,),
+        )
+        row = cur.fetchone()
+        return (date.fromisoformat(row["day"]), row["value"]) if row else None
 
     # ------------------------------------------------------------------ write
     def upsert(self, metrics: DailyMetrics) -> None:
