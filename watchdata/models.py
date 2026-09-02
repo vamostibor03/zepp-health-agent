@@ -64,18 +64,34 @@ class DailyMetrics:
         return out
 
 
-# Manually-logged metrics (not provided by the watch). Recorded via the
-# Telegram bot and surfaced through the MCP + transformation summary.
-MANUAL_METRICS: dict[str, dict[str, str]] = {
+# Body measurements (Telegram / optional MFP weight). Distinct from nutrition.
+BODY_METRICS: dict[str, dict[str, str]] = {
     "weight": {"label": "Weight", "unit": "kg"},
     "waist": {"label": "Waist", "unit": "cm"},
     "chest": {"label": "Chest", "unit": "cm"},
     "hips": {"label": "Hips", "unit": "cm"},
     "neck": {"label": "Neck", "unit": "cm"},
     "bodyfat": {"label": "Body fat", "unit": "%"},
-    "calories": {"label": "Calories", "unit": "kcal"},
-    "protein": {"label": "Protein", "unit": "g"},
 }
+
+# Daily nutrition *intake* (MyFitnessPal, or logged by hand). Never expenditure.
+# Watch burn stays on DailyMetrics.calories_kcal.
+NUTRITION_METRICS: dict[str, dict[str, str]] = {
+    "calories": {"label": "Calories eaten", "unit": "kcal"},
+    "protein": {"label": "Protein", "unit": "g"},
+    "carbs": {"label": "Carbs", "unit": "g"},
+    "fat": {"label": "Fat", "unit": "g"},
+    "fiber": {"label": "Fiber", "unit": "g"},
+    "sugar": {"label": "Sugar", "unit": "g"},
+    "saturated_fat": {"label": "Saturated fat", "unit": "g"},
+    "sodium": {"label": "Sodium", "unit": "mg"},
+    "potassium": {"label": "Potassium", "unit": "mg"},
+    "cholesterol": {"label": "Cholesterol", "unit": "mg"},
+}
+
+# Manually-logged metrics (not provided by the watch). Recorded via the
+# Telegram bot / MyFitnessPal sync and surfaced through MCP + summaries.
+MANUAL_METRICS: dict[str, dict[str, str]] = {**BODY_METRICS, **NUTRITION_METRICS}
 
 # Convenience aliases accepted from the user (mapped to canonical keys above).
 MANUAL_ALIASES: dict[str, str] = {
@@ -83,14 +99,31 @@ MANUAL_ALIASES: dict[str, str] = {
     "kg": "weight",
     "bf": "bodyfat",
     "bodyfat_pct": "bodyfat",
-    "fat": "bodyfat",
     "cal": "calories",
     "cals": "calories",
     "kcal": "calories",
     "calories_kcal": "calories",
     "prot": "protein",
     "protein_g": "protein",
+    "carbohydrates": "carbs",
+    "carb": "carbs",
+    "dietary_fat": "fat",
+    "fat_g": "fat",
+    "fibre": "fiber",
+    "sat_fat": "saturated_fat",
+    "satfat": "saturated_fat",
+    "na": "sodium",
+    "k": "potassium",
 }
+
+# Note attached to every nutrition payload so analysis tools do not treat
+# intake as expenditure or invent a deficit/TDEE from it.
+NUTRITION_NOTE = (
+    "Logged intake from MyFitnessPal (or manual log). These are original "
+    "diary values, not calorie expenditure. Do not compute TDEE, deficit, "
+    "or maintenance from them; infer expenditure separately from intake + "
+    "weight trend. Distinct from Amazfit active calories (calories_kcal)."
+)
 
 
 def resolve_manual_metric(name: str) -> Optional[str]:

@@ -21,8 +21,10 @@ primary_region = "fra"
   HOST = "0.0.0.0"
   PORT = "8080"
   DATABASE_PATH = "/data/health.db"
-  # Lock the Host header to your domain (set after you know the app name).
-  MCP_ALLOWED_HOSTS = "watchdata.fly.dev"
+  # After the first deploy, set this to your real domain (e.g. <app>.fly.dev)
+  # to lock down the Host header, then redeploy. Left unset so the first deploy
+  # works no matter what app name Fly assigns.
+  # MCP_ALLOWED_HOSTS = "watchdata.fly.dev"
   # Uncomment to have the host send the daily report itself (then DISABLE the
   # GitHub Actions schedule to avoid duplicate messages):
   # RUN_DAILY_UTC = "08:30"

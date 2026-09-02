@@ -1,9 +1,31 @@
 # WatchData — Daily Amazfit/Zepp Health Report
 
+![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-scheduled%20daily-2088FF?logo=githubactions&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
+![Fly.io](https://img.shields.io/badge/Fly.io-deployed-8B5CF6?logo=flydotio&logoColor=white)
+![Telegram](https://img.shields.io/badge/Telegram%20Bot-26A5E4?logo=telegram&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green)
+
 A Python app that runs **daily in GitHub Actions**, pulls your Amazfit/Zepp
 health data, stores it in a versioned SQLite history, computes **trends vs your
 previous 7 / 30 / 90 days**, asks an **LLM** to analyze the day, and delivers
 the report to your **Telegram bot**.
+
+## Quickstart
+
+```bash
+python -m venv .venv && .venv\Scripts\activate   # macOS/Linux: source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env        # Zepp credentials, Telegram token, LLM key
+python check_setup.py       # validates config before the first real run
+python -m watchdata.main daily
+```
+
+To run it hands-free, add the same values as repository secrets and the included
+GitHub Actions workflow takes over on a daily schedule. `Dockerfile`, `fly.toml`
+and `render.yaml` are included for container hosting.
 
 It has two modes:
 
@@ -19,14 +41,16 @@ It has two modes:
 
 ## How it works
 
-```
-Zepp cloud ──> zepp_client ──> storage (SQLite) ──> trends (7/30/90d)
-                                   │                      │
-                                   └──────────┬───────────┘
-                                              ▼
-                                        llm (analysis)
-                                              ▼
-                                     report ──> Telegram
+```mermaid
+flowchart LR
+    A[Zepp / Huami cloud<br/>unofficial API] --> B[zepp_client<br/>login + daily summaries]
+    B --> C[(storage<br/>SQLite history)]
+    C --> D[trends<br/>vs trailing 7/30/90d]
+    C --> D
+    D --> E[llm<br/>analysis + deterministic fallback]
+    E --> F[report<br/>message formatting]
+    F --> G[Telegram bot]
+    H[GitHub Actions<br/>daily schedule] -.triggers.-> B
 ```
 
 | File | Responsibility |

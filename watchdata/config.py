@@ -53,7 +53,16 @@ class Config:
     database_path: str
     timezone: str = "UTC"
 
+    # MyFitnessPal (optional). Cookie auth; no official public API.
+    mfp_cookie: str = ""
+    mfp_username: str = ""
+    mfp_impersonate: str = "chrome"
+
     tzinfo: ZoneInfo = field(init=False)
+
+    @property
+    def mfp_enabled(self) -> bool:
+        return bool(self.mfp_cookie)
 
     def __post_init__(self) -> None:
         try:
@@ -109,6 +118,9 @@ class Config:
             telegram_chat_id=_require("TELEGRAM_CHAT_ID"),
             database_path=_optional("DATABASE_PATH", "data/health.db"),
             timezone=_optional("TIMEZONE", "UTC"),
+            mfp_cookie=_optional("MFP_COOKIE"),
+            mfp_username=_optional("MFP_USERNAME"),
+            mfp_impersonate=_optional("MFP_IMPERSONATE", "chrome") or "chrome",
         )
 
 
